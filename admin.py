@@ -1,44 +1,55 @@
 from django.contrib import admin
-from .models import HealthPrediction
+from .models import Food, FoodCategory, MealPlan, MealFood
 
 # Import custom admin site
 from nutrilogic.admin_customization import admin_site
 
 # Register your models here.
 
-class HealthPredictionAdmin(admin.ModelAdmin):
-    list_display = ['user', 'condition_type', 'risk_level', 'prediction_score', 'prediction_date']
-    list_filter = ['condition_type', 'risk_level', 'prediction_date']
-    search_fields = ['user__username', 'user__email']
-    readonly_fields = ['prediction_date', 'prediction_score', 'input_data']
-    date_hierarchy = 'prediction_date'
-    ordering = ['-prediction_date']
-    
-    fieldsets = (
-        ('User Information', {
-            'fields': ('user',)
-        }),
-        ('Prediction Details', {
-            'fields': ('condition_type', 'risk_level', 'prediction_score', 'prediction_date')
-        }),
-        ('Input Data', {
-            'fields': ('input_data',),
-            'classes': ('collapse',)
-        }),
-        ('Additional Notes', {
-            'fields': ('notes',)
-        }),
-    )
-    
-    def get_risk_level_display_with_color(self, obj):
-        colors = {
-            'L': 'green',
-            'M': 'orange',
-            'H': 'red'
-        }
-        color = colors.get(obj.risk_level, 'black')
-        return f'<span style="color: {color}; font-weight: bold;">{obj.get_risk_level_display()}</span>'
-    get_risk_level_display_with_color.allow_tags = True
-    get_risk_level_display_with_color.short_description = 'Risk Level'
+class FoodCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description']
+    search_fields = ['name']
 
-admin_site.register(HealthPrediction, HealthPredictionAdmin)
+class FoodAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'calories', 'protein', 'carbs', 'fats']
+    list_filter = ['category']
+    search_fields = ['name']
+    list_per_page = 50
+
+class MealPlanAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'date', 'meal_type', 'is_consumed']
+    list_filter = ['meal_type', 'is_consumed', 'date']
+    search_fields = ['name', 'user__username']
+    date_hierarchy = 'date'
+    readonly_fields = ['total_calories', 'total_protein', 'total_carbs', 'total_fats']
+    
+    def total_calories(self, obj):
+        return f"{obj.total_calories:.2f} kcal"
+    total_calories.short_description = 'Total Calories'
+    
+    def total_protein(self, obj):
+        return f"{obj.total_protein:.2f}g"
+    total_protein.short_description = 'Total Protein'
+    
+    def total_carbs(self, obj):
+        return f"{obj.total_carbs:.2f}g"
+    total_carbs.short_description = 'Total Carbs'
+    
+    def total_fats(self, obj):
+        return f"{obj.total_fats:.2f}g"
+    total_fats.short_description = 'Total Fats'
+
+class MealFoodAdmin(admin.ModelAdmin):
+    list_display = ['meal_plan', 'food', 'quantity', 'display_calories']
+    list_filter = ['meal_plan__meal_type']
+    search_fields = ['meal_plan__name', 'food__name']
+    
+    def display_calories(self, obj):
+        return f"{obj.calories:.2f} kcal"
+    display_calories.short_description = 'Calories'
+
+# Register with custom admin site
+admin_site.register(FoodCategory, FoodCategoryAdmin)
+admin_site.register(Food, FoodAdmin)
+admin_site.register(MealPlan, MealPlanAdmin)
+admin_site.register(MealFood, MealFoodAdmin)
