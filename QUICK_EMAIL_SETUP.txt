@@ -1,0 +1,144 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║                   NUTRILOGIC - EMAIL SETUP GUIDE                       ║
+║                   Password Reset Functionality                         ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+📧 Configuration Details:
+   • Sender: nutrilogic79@gmail.com
+   • Receiver: adithiyavinu.b@gmail.com (or any registered user)
+   • Service: Gmail SMTP
+   • Purpose: Send password reset emails to users
+
+═══════════════════════════════════════════════════════════════════════
+
+🔐 STEP 1: Generate Gmail App Password
+═══════════════════════════════════════════════════════════════════════
+
+1. Go to: https://myaccount.google.com/apppasswords
+   
+2. Sign in with: nutrilogic79@gmail.com
+
+3. Select:
+   • App: Mail
+   • Device: Other (Custom name) → Type "NutriLogic"
+
+4. Click "Generate"
+
+5. Copy the 16-character password (format: xxxx xxxx xxxx xxxx)
+
+6. SAVE THIS PASSWORD SECURELY!
+
+═══════════════════════════════════════════════════════════════════════
+
+💻 STEP 2: Set the Environment Variable
+═══════════════════════════════════════════════════════════════════════
+
+WINDOWS (PowerShell):
+   $env:EMAIL_HOST_PASSWORD="paste-your-app-password-here"
+
+WINDOWS (Command Prompt):
+   set EMAIL_HOST_PASSWORD=paste-your-app-password-here
+
+macOS/Linux:
+   export EMAIL_HOST_PASSWORD="paste-your-app-password-here"
+
+═══════════════════════════════════════════════════════════════════════
+
+🧪 STEP 3: Test the Configuration
+═══════════════════════════════════════════════════════════════════════
+
+Option A - Run the test script:
+   python test_email.py
+
+Option B - Test via Django shell:
+   python manage.py shell
+
+   Then run:
+   from django.core.mail import send_mail
+   send_mail(
+       'Test from NutriLogic',
+       'This is a test email.',
+       'nutrilogic79@gmail.com',
+       ['adithiyavinu.b@gmail.com'],
+       fail_silently=False,
+   )
+
+Option C - Test via website:
+   1. Run: python manage.py runserver
+   2. Go to: http://127.0.0.1:8000/password-reset/
+   3. Enter your email: adithiyavinu.b@gmail.com
+   4. Check your inbox for the reset email
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════
+
+□ 2FA enabled on nutrilogic79@gmail.com
+□ App Password generated from Google
+□ EMAIL_HOST_PASSWORD environment variable set
+□ Test email sent successfully
+□ Email received in inbox (check spam folder too!)
+□ Password reset flow working on website
+
+═══════════════════════════════════════════════════════════════════════
+
+🐛 TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════════
+
+Problem: "Username and Password not accepted"
+Solution: 
+   • Use App Password (not regular Gmail password)
+   • Verify 2FA is enabled
+   • Generate a new App Password
+
+Problem: "Connection timeout"
+Solution:
+   • Check internet connection
+   • Verify firewall settings
+   • Try port 465 instead of 587
+
+Problem: Environment variable not working
+Solution:
+   • Restart terminal/command prompt
+   • Restart Django server
+   • Verify with: echo %EMAIL_HOST_PASSWORD% (Windows)
+               or: echo $EMAIL_HOST_PASSWORD (Mac/Linux)
+
+═══════════════════════════════════════════════════════════════════════
+
+📁 FILES MODIFIED
+═══════════════════════════════════════════════════════════════════════
+
+✓ nutrilogic/settings.py - Email configuration added
+✓ users/templates/users/password_reset.html - Orange theme
+✓ users/templates/users/password_reset_done.html - Orange theme
+✓ users/templates/users/password_reset_confirm.html - Orange theme
+✓ users/templates/users/password_reset_complete.html - Orange theme
+✓ test_email.py - Email testing script created
+✓ EMAIL_SETUP_GUIDE.md - Detailed setup guide created
+
+═══════════════════════════════════════════════════════════════════════
+
+🔒 SECURITY NOTES
+═══════════════════════════════════════════════════════════════════════
+
+⚠️ NEVER commit the App Password to Git!
+⚠️ NEVER share the App Password publicly!
+⚠️ Use environment variables or .env files (add .env to .gitignore)
+⚠️ Rotate App Passwords every 3-6 months
+
+═══════════════════════════════════════════════════════════════════════
+
+📞 SUPPORT
+═══════════════════════════════════════════════════════════════════════
+
+For issues or questions:
+   • Email: adithiyavinu.b@gmail.com
+   • Check: EMAIL_SETUP_GUIDE.md for detailed instructions
+
+═══════════════════════════════════════════════════════════════════════
+Last Updated: October 2025
+Project: NutriLogic - AI-Powered Nutrition Platform
+═══════════════════════════════════════════════════════════════════════
+
