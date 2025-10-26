@@ -1,85 +1,91 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+from PIL import Image
 
 # Create your models here.
-class FoodCategory(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    
-    def __str__(self):
-        return self.name
-    
-    class Meta:
-        verbose_name_plural = "Food Categories"
-
-class Food(models.Model):
-    name = models.CharField(max_length=100)
-    category = models.ForeignKey(FoodCategory, on_delete=models.CASCADE, related_name='foods')
-    calories = models.PositiveIntegerField(help_text="Calories per 100g")
-    protein = models.FloatField(help_text="Protein in grams per 100g")
-    carbs = models.FloatField(help_text="Carbohydrates in grams per 100g")
-    fats = models.FloatField(help_text="Fats in grams per 100g")
-    fiber = models.FloatField(help_text="Fiber in grams per 100g", default=0)
-    image = models.ImageField(upload_to='food_images', default='default_food.jpg')
-    
-    def __str__(self):
-        return self.name
-
-class MealPlan(models.Model):
-    MEAL_TYPE_CHOICES = [
-        ('B', 'Breakfast'),
-        ('L', 'Lunch'),
-        ('D', 'Dinner'),
-        ('S', 'Snack'),
+class Profile(models.Model):
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='meal_plans')
-    name = models.CharField(max_length=100)
-    date = models.DateField()
-    meal_type = models.CharField(max_length=1, choices=MEAL_TYPE_CHOICES)
-    foods = models.ManyToManyField(Food, through='MealFood')
-    is_consumed = models.BooleanField(default=False)
-    notes = models.TextField(blank=True)
+    ACTIVITY_LEVEL_CHOICES = [
+        ('S', 'Sedentary (little or no exercise)'),
+        ('L', 'Lightly active (light exercise/sports 1-3 days/week)'),
+        ('M', 'Moderately active (moderate exercise/sports 3-5 days/week)'),
+        ('V', 'Very active (hard exercise/sports 6-7 days a week)'),
+        ('E', 'Extra active (very hard exercise, physical job or training twice a day)'),
+    ]
+    
+    GOAL_CHOICES = [
+        ('L', 'Lose weight'),
+        ('M', 'Maintain weight'),
+        ('G', 'Gain weight'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+    age = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(120)])
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, null=True, blank=True)
+    height = models.FloatField(null=True, blank=True, validators=[MinValueValidator(50), MaxValueValidator(300)], help_text="Height in cm")
+    weight = models.FloatField(null=True, blank=True, validators=[MinValueValidator(20), MaxValueValidator(500)], help_text="Weight in kg")
+    activity_level = models.CharField(max_length=1, choices=ACTIVITY_LEVEL_CHOICES, default='M')
+    goal = models.CharField(max_length=1, choices=GOAL_CHOICES, default='M')
+    daily_water_target = models.PositiveIntegerField(default=8, help_text="Target number of glasses per day")
+    daily_calorie_target = models.PositiveIntegerField(null=True, blank=True)
     
     def __str__(self):
-        return f"{self.name} - {self.get_meal_type_display()} ({self.date})"
+        return f'{self.user.username} Profile'
     
-    @property
-    def total_calories(self):
-        return sum(meal_food.calories for meal_food in self.meal_foods.all())
+    def calculate_bmi(self):
+        if self.height and self.weight:
+            height_m = self.height / 100  # Convert cm to m
+            return self.weight / (height_m * height_m)
+        return None
     
-    @property
-    def total_protein(self):
-        return sum(meal_food.protein for meal_food in self.meal_foods.all())
-    
-    @property
-    def total_carbs(self):
-        return sum(meal_food.carbs for meal_food in self.meal_foods.all())
-    
-    @property
-    def total_fats(self):
-        return sum(meal_food.fats for meal_food in self.meal_foods.all())
-
-class MealFood(models.Model):
-    meal_plan = models.ForeignKey(MealPlan, on_delete=models.CASCADE, related_name='meal_foods')
-    food = models.ForeignKey(Food, on_delete=models.CASCADE)
-    quantity = models.FloatField(help_text="Quantity in grams")
-    
-    def __str__(self):
-        return f"{self.food.name} ({self.quantity}g) in {self.meal_plan.name}"
-    
-    @property
-    def calories(self):
-        return (self.food.calories * self.quantity) / 100
-    
-    @property
-    def protein(self):
-        return (self.food.protein * self.quantity) / 100
-    
-    @property
-    def carbs(self):
-        return (self.food.carbs * self.quantity) / 100
-    
-    @property
-    def fats(self):
-        return (self.food.fats * self.quantity) / 100
+    def save(self, *args, **kwargs):
+        # Calculate daily calorie target before saving if height and weight are provided
+        if self.height and self.weight and self.age and self.gender:
+            # Calculate BMI
+            bmi = self.calculate_bmi()
+            
+            # Calculate BMR (Basal Metabolic Rate) using Mifflin-St Jeor Equation
+            if self.gender == 'M':
+                bmr = 10 * self.weight + 6.25 * self.height - 5 * self.age + 5
+            else:
+                bmr = 10 * self.weight + 6.25 * self.height - 5 * self.age - 161
+            
+            # Apply activity factor
+            activity_factors = {
+                'S': 1.2,
+                'L': 1.375,
+                'M': 1.55,
+                'V': 1.725,
+                'E': 1.9
+            }
+            
+            maintenance_calories = bmr * activity_factors[self.activity_level]
+            
+            # Adjust based on goal
+            if self.goal == 'L':
+                self.daily_calorie_target = int(maintenance_calories * 0.85)  # 15% deficit
+            elif self.goal == 'G':
+                self.daily_calorie_target = int(maintenance_calories * 1.15)  # 15% surplus
+            else:
+                self.daily_calorie_target = int(maintenance_calories)
+        
+        # Save the model first
+        super().save(*args, **kwargs)
+        
+        # Resize profile image if it exists
+        try:
+            img = Image.open(self.image.path)
+            if img.height > 300 or img.width > 300:
+                output_size = (300, 300)
+                img.thumbnail(output_size)
+                img.save(self.image.path)
+        except (FileNotFoundError, ValueError, AttributeError):
+            # If the image file doesn't exist or there's an issue, skip resizing
+            pass
